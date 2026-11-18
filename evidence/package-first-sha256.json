@@ -1,0 +1,16 @@
+{
+  "out/PLAY.json": "152df7d398cbc94e20dde24e9fa2d7e358b57224f54f7b8f0cc8af8257785b81",
+  "out/dossier.json": "68d1995c6aa5b3f26d74efa124dc8fff3706ea6f55c7cebc71ec10e64d91b40e",
+  "out/game.rbxl": "5eed7795a35ba3835fa64f6e5eb76b7b0954173dda55f8725606e386f841c215",
+  "out/screenshots/1-start.png": "503c5c98225546bbce8625ee1bc7ea6d25346c23673736f3e1bdaef62beab110",
+  "out/screenshots/2-play.png": "982e6340f010ef0e9738d39a84f6df9ef6f03cafc7a154189b8be7c551997c1c",
+  "out/screenshots/3-end.png": "ba7acc5c96f4d6b200ba11aaec61f32d81e52c359ed648c4d1a1ad32534d9f85",
+  "out/src/client/Game.client.luau": "f625d055bdfaaa613ab67efaaf636002a13b247bfb1f0e6298306212a630496c",
+  "out/src/server/BrainrotModels.luau": "cfc3789adbf9a5949826df66360699a82a52c19f3820870fd7d6b84996fef980",
+  "out/src/server/GameServer.server.luau": "37cbcf243923137460627642e0c1d9de7a6a8963add2605c4d4bb1721540f8db",
+  "out/src/server/Monsoon.luau": "564b9e3c298dea81e00b965319b5f809fca8e7d620d0873bbb65788cec39d329",
+  "out/src/server/Thief.luau": "6fd6d085829c7a35067397b32342f86c4385646b5e43812f2f5ebd960889fb4e",
+  "out/src/server/World.luau": "a22ca0503f0be9d517563722d9d6f222e60b329280c65645dacd7a8c59189955",
+  "out/src/shared/BrainrotData.luau": "a11669b56c57be37b788a6a366864a2b6e1f391432f4f961a1ea020152cfbe25",
+  "out/src/shared/Config.luau": "562883d9c423645ef4bd62818cf78b6755613d32d4ab419feba1efb7a0c95122"
+}
