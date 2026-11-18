@@ -1,0 +1,21 @@
+word	where_built
+3D	src/server/World.luau
+floating market	src/server/World.luau
+golden hour	default.project.json
+blocky	src/server/BrainrotModels.luau
+BillboardGui labels	src/client/Game.client.luau
+warm sun / orange sky tint	default.project.json
+teal water	default.project.json
+wooden docks/stalls	src/server/World.luau
+red-orange lanterns	src/server/World.luau
+lighthouse	src/server/World.luau
+palm trees	src/server/World.luau
+boats	src/server/World.luau
+BIG faces / part eyes and mouth	src/server/BrainrotModels.luau
+distinct silhouette / oversized food feature	src/server/BrainrotModels.luau
+round bandit mask and sack	src/server/BrainrotModels.luau
+tall thin skewer / headband / katana	src/server/BrainrotModels.luau
+green round ball / crown / red cape	src/server/BrainrotModels.luau
+clear HUD	src/client/Game.client.luau
+visible monsoon shelter decision	src/client/Game.client.luau
+green income popups	src/client/Game.client.luau

@@ -1,0 +1,23 @@
+BRAINROT BAZAAR - Build 4 local verification (2026-11-18)
+Client crash fixed. The HUD can now render because startup reaches ScreenGui creation. Live rendering was not tested.
+Service member audit: PASS. No other invalid service members found in src/.
+default.project.json: PASS; SoundService sets RespectFilteringEnabled only
+luau-compile: PASS, all 8 .luau files
+luau-analyze: PASS, 0 errors, 18 SameLineStatement warnings
+rojo build default.project.json --output game.rbxl: PASS
+game.rbxl: PASS, fresh build, 22,081 bytes, mtime 2026-11-18 15:36:17.674500360 UTC
+binary place header: PASS; starts with <roblox!; size below 32 MiB
+MAKEFUN_OUTPUT_DIR=out node main.ts: PASS, two sequential runs
+determinism: PASS across all 14 output files, including raw dossier bytes; package-first-sha256.json
+dossier: 169,924 raw bytes returned by buildDossier (limit 1,572,864)
+package contents: PASS, game.rbxl, PLAY.json, src/, screenshots/, dossier.json
+dot-file exclusion: PASS
+emoji scan: PASS, no matches in src/, main.ts, README.md
+source-sha256.json and package-first-sha256.json: PASS, hashes match current files
+protected files: PASS, PLAY.json, vendor/makefun-roblox.ts, LICENSE, and all 3 screenshots byte-identical to HEAD
+git diff --check: PASS
+brief requirements: PASS; 8 pedestals from start, no paid-unlock gating, all 8 required RemoteEvents, 12 cast entries (10 named + 2 secrets) and mutation factors GOLD x2 / DIAMOND x3 / PEDAS x5; DESIGN.md's documented opening offer Bakso Bandit is $50 at $1/s (it has no full 12-item price/rate table)
+checklist: 14 pass, 1 not_assessed, 15 total checklist rows
+Studio boot/playthrough, visuals, audio, multiplayer, screenshots: not run - no Studio on Linux
+Assumptions: 8 pedestals from the start, NO paid unlocks, rebirth resets cash to $250; lock cooldown starts after expiry; session-only progress.
+TOUR.json is a three-shot cue sheet; manually stage purchase/placement and shelter in Studio.
