@@ -1,0 +1,51 @@
+{
+  "name": "brainrot-bazaar",
+  "tree": {
+    "$className": "DataModel",
+    "Workspace": {
+      "$properties": { "FilteringEnabled": true },
+      "WaterBaseplate": {
+        "$className": "Part",
+        "$properties": {
+          "Anchored": true,
+          "CanCollide": true,
+          "Color": [0.094, 0.588, 0.616],
+          "Material": "Glass",
+          "Position": [0, -10, 0],
+          "Size": [512, 2, 512],
+          "Transparency": 0.1
+        }
+      },
+      "SpawnLocation": {
+        "$className": "SpawnLocation",
+        "$properties": {
+          "Anchored": true,
+          "Neutral": true,
+          "Color": [0.82, 0.46, 0.18],
+          "Position": [0, 2, -5],
+          "Size": [12, 1, 8]
+        }
+      }
+    },
+    "Lighting": {
+      "$properties": {
+        "Ambient": [0.58, 0.46, 0.38],
+        "Brightness": 2.2,
+        "ClockTime": 17.5,
+        "EnvironmentDiffuseScale": 0.5,
+        "EnvironmentSpecularScale": 0.3,
+        "GlobalShadows": true,
+        "Outlines": false,
+        "Technology": "Voxel",
+        "ColorShift_Top": [1, 0.55, 0.28],
+        "ColorShift_Bottom": [0.12, 0.25, 0.34]
+      }
+    },
+    "Players": { "$properties": { "CharacterAutoLoads": true } },
+    "ReplicatedStorage": { "Shared": { "$path": "src/shared" } },
+    "ServerScriptService": { "Server": { "$path": "src/server" } },
+    "StarterPlayer": { "StarterPlayerScripts": { "Client": { "$path": "src/client" } } },
+    "SoundService": { "$properties": { "RespectFilteringEnabled": true } },
+    "StarterGui": {}
+  }
+}

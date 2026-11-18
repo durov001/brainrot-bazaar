@@ -1,0 +1,3 @@
+{
+  "globals": ["game", "script", "workspace", "plugin", "typeof", "warn", "Color3", "Enum", "Instance", "Vector3", "CFrame", "UDim2", "UDim", "TweenInfo", "Random", "task", "Lighting"]
+}
