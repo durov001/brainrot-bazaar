@@ -1,64 +1,79 @@
+-- BRAINROT BAZAAR thief: the dark prowler who raids unlocked bases.
 local Thief = {}
 
-function Thief.spawnThief(parent, position)
-	local thief = Instance.new("Model")
-	thief.Name = "BazaarThief"
+-- Spawn the thief model: a dark body and head with a red THIEF label.
+function Thief.create(parent, at)
+	local model = Instance.new("Model")
+	model.Name = "BazaarThief"
 	local body = Instance.new("Part")
 	body.Name = "Body"
 	body.Size = Vector3.new(3, 5, 2)
-	body.Position = position
+	body.Position = at
 	body.Color = Color3.fromRGB(45, 45, 52)
-	body.Parent = thief
+	body.Parent = model
 	local head = Instance.new("Part")
 	head.Name = "Head"
 	head.Shape = Enum.PartType.Ball
 	head.Size = Vector3.new(3, 3, 3)
-	head.Position = position + Vector3.new(0, 4, 0)
+	head.Position = at + Vector3.new(0, 4, 0)
 	head.Color = Color3.fromRGB(65, 55, 55)
-	head.Parent = thief
-	local gui = Instance.new("BillboardGui")
-	gui.Name = "ThiefAlert"
-	gui.Size = UDim2.fromOffset(150, 45)
-	gui.StudsOffset = Vector3.new(0, 4, 0)
-	gui.AlwaysOnTop = true
-	gui.Parent = head
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.Text = "THIEF!"
-	label.TextColor3 = Color3.fromRGB(255, 30, 25)
-	label.TextScaled = true
-	label.Font = Enum.Font.GothamBlack
-	label.Parent = gui
-	thief.PrimaryPart = body
-	thief.Parent = parent
-	return thief
+	head.Parent = model
+	local tag = Instance.new("BillboardGui")
+	tag.Name = "ThiefAlert"
+	tag.Size = UDim2.fromOffset(150, 45)
+	tag.StudsOffset = Vector3.new(0, 4, 0)
+	tag.AlwaysOnTop = true
+	tag.Parent = head
+	local text = Instance.new("TextLabel")
+	text.Size = UDim2.fromScale(1, 1)
+	text.BackgroundTransparency = 1
+	text.Text = "THIEF!"
+	text.TextColor3 = Color3.fromRGB(255, 30, 25)
+	text.TextScaled = true
+	text.Font = Enum.Font.GothamBlack
+	text.Parent = tag
+	model.PrimaryPart = body
+	model.Parent = parent
+	return model
 end
 
-function Thief.patrolThief(thief, points, pauseSeconds)
-	if not thief or not thief.Parent or #points == 0 then return end
-	for _, point in ipairs(points) do
-		if not thief.Parent then return end
+-- Walk the thief through waypoints, pausing at each one.
+function Thief.walk(thief, waypoints, dwell)
+	if thief == nil or thief.Parent == nil or #waypoints == 0 then
+		return
+	end
+	for _, point in ipairs(waypoints) do
+		if thief.Parent == nil then
+			return
+		end
 		thief:PivotTo(CFrame.new(point + Vector3.new(0, 3, 0)))
-		task.wait(pauseSeconds or 1.5)
+		task.wait(dwell or 1.5)
 	end
 end
 
-function Thief.stealFromBase(state)
-	if not state or os.clock() < (state.lockedUntil or 0) then return nil end
-	for index = #state.pedestals, 1, -1 do
-		if state.pedestals[index] then
-			local stolen = state.pedestals[index]
-			state.pedestals[index] = nil
-			return index, stolen
+-- Steal the highest-index filled slot of a base state. A locked base refuses.
+-- Returns the slot and the stolen entry, or nil when nothing can be taken.
+function Thief.rob(state)
+	if state == nil then
+		return nil
+	end
+	if os.clock() < (state.lockedUntil or 0) then
+		return nil
+	end
+	for slot = #state.slots, 1, -1 do
+		local entry = state.slots[slot]
+		if entry ~= nil then
+			state.slots[slot] = nil
+			return slot, entry
 		end
 	end
 	return nil
 end
 
-function Thief.fleeThief(thief, exitPoint)
-	if thief and thief.Parent then
-		thief:PivotTo(CFrame.new(exitPoint + Vector3.new(0, 3, 0)))
+-- Teleport the thief to the exit and remove it.
+function Thief.escape(thief, exitAt)
+	if thief ~= nil and thief.Parent ~= nil then
+		thief:PivotTo(CFrame.new(exitAt + Vector3.new(0, 3, 0)))
 		task.wait(0.5)
 		thief:Destroy()
 	end

@@ -1,3 +1,4 @@
+-- BRAINROT BAZAAR server: the economy, the market, the thief and the monsoon.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -9,111 +10,137 @@ local Models = require(script.Parent:WaitForChild("BrainrotModels"))
 local Thief = require(script.Parent:WaitForChild("Thief"))
 local Monsoon = require(script.Parent:WaitForChild("Monsoon"))
 
-local remotes = ReplicatedStorage:FindFirstChild("BazaarRemotes") or Instance.new("Folder")
-remotes.Name = "BazaarRemotes"
-remotes.Parent = ReplicatedStorage
+-- One folder holding every RemoteEvent the client talks to.
+local folder = ReplicatedStorage:FindFirstChild("BazaarRemotes") or Instance.new("Folder")
+folder.Name = "BazaarRemotes"
+folder.Parent = ReplicatedStorage
 
-local function remote(name)
-	local event = remotes:FindFirstChild(name) or Instance.new("RemoteEvent")
+local Remotes = {}
+for _, name in ipairs({ "BuyBrainrot", "PlaceBrainrot", "SellBrainrot", "Rebirth", "ToggleLock", "StateUpdate", "Notice", "Income" }) do
+	local event = folder:FindFirstChild(name) or Instance.new("RemoteEvent")
 	event.Name = name
-	event.Parent = remotes
-	return event
+	event.Parent = folder
+	Remotes[name] = event
 end
 
-local BuyBrainrot = remote("BuyBrainrot")
-local PlaceBrainrot = remote("PlaceBrainrot")
-local SellBrainrot = remote("SellBrainrot")
-local Rebirth = remote("Rebirth")
-local ToggleLock = remote("ToggleLock")
-local StateUpdate = remote("StateUpdate")
-local Notice = remote("Notice")
-local Income = remote("Income")
-
-local world = World.Build()
+local world = World.assemble()
 local bases = world:WaitForChild("PlayerBases")
-local states = {}
-local assignedBase = {}
-local offers = {}
-local missions = { "Buy 3 brainrots", "Earn $1,000", "Rebirth once", "Own a Legendary" }
 local marketFolder = Instance.new("Folder")
 marketFolder.Name = "MarketOffers"
 marketFolder.Parent = world
 
-local function baseFor(player)
-	local index = assignedBase[player]
-	return index and bases:FindFirstChild("Base_" .. index)
+local states = {}
+local baseOwner = {}
+local offers = {}
+local missions = { "Buy your first brainrot", "Fill 4 pedestals", "Earn $500", "Rebirth once" }
+
+local function findBase(player)
+	local index = baseOwner[player]
+	if index == nil then
+		return nil
+	end
+	return bases:FindFirstChild("Base_" .. index)
 end
 
-local function distanceFrom(player, position)
+local function gap(player, position)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	return root and (root.Position - position).Magnitude or math.huge
-end
-
-local function playerNearBase(player)
-	local base = baseFor(player)
-	local floor = base and base:FindFirstChild("BaseFloor")
-	return floor and distanceFrom(player, floor.Position) <= Config.InteractionDistance
-end
-
-local function snapshot(player)
-	local state = states[player]
-	if not state then return end
-	local pedestals = {}
-	for slot = 1, Config.PedestalCount do
-		pedestals[slot] = state.pedestals[slot]
+	if root == nil then
+		return math.huge
 	end
-	local offerData = {}
-	for i, item in ipairs(offers) do offerData[i] = item.Name end
-	StateUpdate:FireClient(player, {
-		cash = state.cash, rate = state.rate, multiplier = state.multiplier,
-		rebirths = state.rebirths, pedestals = pedestals, carry = state.carry,
-		locked = os.clock() < state.lockedUntil, lockReady = os.clock() >= state.lockCooldownUntil,
-		offers = offerData, mission = missions[(math.floor(os.clock() / 45) % #missions) + 1],
-		baseIndex = assignedBase[player],
+	return (root.Position - position).Magnitude
+end
+
+local function nearOwnBase(player)
+	local base = findBase(player)
+	local floorPart = base and base:FindFirstChild("BaseFloor")
+	if floorPart == nil then
+		return false
+	end
+	return gap(player, floorPart.Position) <= Config.Reach
+end
+
+-- Send one player the whole visible state: cash, rate, slots, carry, lock, offers.
+local function pushState(player)
+	local state = states[player]
+	if state == nil then
+		return
+	end
+	local slots = {}
+	for slot = 1, Config.PedestalsPerBase do
+		slots[slot] = state.slots[slot]
+	end
+	local offerNames = {}
+	for i, item in ipairs(offers) do
+		offerNames[i] = item.name
+	end
+	Remotes.StateUpdate:FireClient(player, {
+		cash = state.cash,
+		rate = state.rate,
+		boost = state.boost,
+		rebirths = state.rebirths,
+		slots = slots,
+		carried = state.carried,
+		locked = os.clock() < state.lockedUntil,
+		lockReady = os.clock() >= state.lockReadyAt,
+		offers = offerNames,
+		mission = missions[(math.floor(os.clock() / 45) % #missions) + 1],
+		baseIndex = baseOwner[player],
 	})
 end
 
-local function updateIncome(player)
-	local state = states[player]
-	if not state then return end
-	state.rate = 0
-	for _, entry in pairs(state.pedestals) do
-		local item = entry and Data.Get(entry.name)
-		if item then state.rate += Data.Income(item, entry.mutation, state.multiplier) end
+-- Recompute a state's dollars per second from its filled pedestals.
+local function refreshRate(state)
+	local total = 0
+	for _, entry in pairs(state.slots) do
+		local item = entry and Data.find(entry.name)
+		if item ~= nil then
+			total += Data.earnPerSecond(item, entry.mutation, state.boost)
+		end
 	end
-	state.rate = math.floor(state.rate * 100) / 100
+	state.rate = math.floor(total * 100) / 100
 end
 
-local function makePlaced(player, slot, entry)
-	local base = baseFor(player)
+local function spawnPlaced(player, slot, entry)
+	local base = findBase(player)
 	local pedestal = base and base:FindFirstChild("Pedestal_" .. slot)
-	if not pedestal then return end
+	if pedestal == nil then
+		return
+	end
 	local old = base:FindFirstChild("Placed_" .. slot)
-	if old then old:Destroy() end
-	local model = Models.Build(entry.name, pedestal.Position + Vector3.new(0, 4, 0))
+	if old ~= nil then
+		old:Destroy()
+	end
+	local model = Models.make(entry.name, pedestal.Position + Vector3.new(0, 4, 0))
 	model.Name = "Placed_" .. slot
 	model:SetAttribute("OwnerUserId", player.UserId)
 	model:SetAttribute("BrainrotName", entry.name)
 	model:SetAttribute("Mutation", entry.mutation)
 	for _, object in ipairs(model:GetDescendants()) do
-		if object:IsA("BasePart") then object.Anchored = true end
+		if object:IsA("BasePart") then
+			object.Anchored = true
+		end
 	end
 	model.Parent = base
 end
 
-local function clearPlaced(player, slot)
-	local base = baseFor(player)
+local function removePlaced(player, slot)
+	local base = findBase(player)
 	local old = base and base:FindFirstChild("Placed_" .. slot)
-	if old then old:Destroy() end
+	if old ~= nil then
+		old:Destroy()
+	end
 end
 
-local function cycleOffers()
+-- Pick four fresh market offers and show them as colored balls over the stalls.
+local function rotateOffers()
 	for i = 1, 4 do
-		local index = math.random(1, #Data.List)
-		offers[i] = Data.List[index]
+		local name = Data.Order[math.random(1, #Data.Order)]
+		offers[i] = Data.find(name)
 		local display = marketFolder:FindFirstChild("Offer_" .. i)
-		if display then display:Destroy() end
+		if display ~= nil then
+			display:Destroy()
+		end
 		local stallX = (i - 2.5) * 42
 		local stand = Instance.new("Part")
 		stand.Name = "Offer_" .. i
@@ -121,204 +148,289 @@ local function cycleOffers()
 		stand.Position = Vector3.new(stallX, 7, 32)
 		stand.Anchored = true
 		stand.CanCollide = false
-		stand.Color = offers[i].Color
+		stand.Color = offers[i].color
 		stand.Shape = Enum.PartType.Ball
 		stand.Parent = marketFolder
-		local gui = Instance.new("BillboardGui")
-		gui.Size = UDim2.fromOffset(220, 70)
-		gui.StudsOffset = Vector3.new(0, 3, 0)
-		gui.AlwaysOnTop = true
-		gui.Parent = stand
+		local board = Instance.new("BillboardGui")
+		board.Size = UDim2.fromOffset(220, 70)
+		board.StudsOffset = Vector3.new(0, 3, 0)
+		board.AlwaysOnTop = true
+		board.Parent = stand
 		local label = Instance.new("TextLabel")
 		label.Size = UDim2.fromScale(1, 1)
 		label.BackgroundColor3 = Color3.fromRGB(42, 32, 28)
 		label.BackgroundTransparency = 0.12
-		label.Text = offers[i].Name .. "\n$" .. offers[i].Price .. " | " .. offers[i].Rarity
+		label.Text = offers[i].name .. "\n$" .. offers[i].price .. " | " .. offers[i].rarity
 		label.TextColor3 = Color3.new(1, 1, 1)
 		label.TextScaled = true
 		label.Font = Enum.Font.GothamBold
-		label.Parent = gui
+		label.Parent = board
 	end
-	for player in pairs(states) do snapshot(player) end
+	for player in pairs(states) do
+		pushState(player)
+	end
 end
 
-local function assignBase(player)
-	for index = 1, Config.BaseCount do
-		local occupied = false
-		for _, value in pairs(assignedBase) do if value == index then occupied = true end end
-		if not occupied then assignedBase[player] = index break end
+local function claimBase(player)
+	for index = 1, Config.BaseTotal do
+		local taken = false
+		for _, value in pairs(baseOwner) do
+			if value == index then
+				taken = true
+			end
+		end
+		if not taken then
+			baseOwner[player] = index
+			break
+		end
 	end
-	local base = baseFor(player)
-	if base then
+	local base = findBase(player)
+	if base ~= nil then
 		base:SetAttribute("OwnerUserId", player.UserId)
 		local sign = base:FindFirstChild("Sign")
-		if sign then sign:SetAttribute("OwnerName", player.DisplayName) end
+		if sign ~= nil then
+			sign:SetAttribute("OwnerName", player.DisplayName)
+		end
 	end
 end
 
 Players.PlayerAdded:Connect(function(player)
-	assignBase(player)
+	claimBase(player)
 	states[player] = {
-		cash = Config.StartCash, pedestals = {}, rebirths = 0, multiplier = 1,
-		lockedUntil = 0, lockCooldownUntil = 0, carry = nil, rate = 0, buys = 0,
+		cash = Config.StartingCash,
+		slots = {},
+		rebirths = 0,
+		boost = 1,
+		lockedUntil = 0,
+		lockReadyAt = 0,
+		carried = nil,
+		rate = 0,
+		bought = 0,
 	}
-	task.defer(snapshot, player)
+	task.defer(pushState, player)
 	player.CharacterAdded:Connect(function()
 		task.wait(1)
-		snapshot(player)
+		pushState(player)
 	end)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
-	local base = baseFor(player)
-	if base then
+	local base = findBase(player)
+	if base ~= nil then
 		base:SetAttribute("OwnerUserId", nil)
 		for _, child in ipairs(base:GetChildren()) do
-			if child.Name:match("^Placed_") then child:Destroy() end
+			if child.Name:match("^Placed_") then
+				child:Destroy()
+			end
 		end
 	end
 	states[player] = nil
-	assignedBase[player] = nil
+	baseOwner[player] = nil
 end)
 
-BuyBrainrot.OnServerEvent:Connect(function(player, offerIndex)
+Remotes.BuyBrainrot.OnServerEvent:Connect(function(player, offerIndex)
 	local state = states[player]
-	local item = typeof(offerIndex) == "number" and offers[math.floor(offerIndex)]
-	local stand = typeof(offerIndex) == "number" and marketFolder:FindFirstChild("Offer_" .. math.floor(offerIndex))
-	if not state or not item or not stand then return end
-	if distanceFrom(player, stand.Position) > Config.InteractionDistance then Notice:FireClient(player, "Walk closer to the market stall.") return end
-	if state.carry then Notice:FireClient(player, "Place your carried brainrot first.") return end
-	if state.cash < item.Price then Notice:FireClient(player, "Not enough cash.") return end
-	state.cash -= item.Price
-	state.carry = { name = item.Name, mutation = "NORMAL" }
-	state.buys += 1
+	local index = typeof(offerIndex) == "number" and math.floor(offerIndex) or nil
+	local item = index ~= nil and offers[index] or nil
+	local stand = index ~= nil and marketFolder:FindFirstChild("Offer_" .. index) or nil
+	if state == nil or item == nil or stand == nil then
+		return
+	end
+	if gap(player, stand.Position) > Config.Reach then
+		Remotes.Notice:FireClient(player, "Walk closer to the market stall.")
+		return
+	end
+	if state.carried ~= nil then
+		Remotes.Notice:FireClient(player, "Place your carried brainrot first.")
+		return
+	end
+	if state.cash < item.price then
+		Remotes.Notice:FireClient(player, "Not enough cash.")
+		return
+	end
+	state.cash -= item.price
+	state.carried = { name = item.name, mutation = "NORMAL" }
+	state.bought += 1
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if root then
-		local carried = Models.Build(item.Name, root.Position + Vector3.new(0, 5, 0))
+	if root ~= nil then
+		local carried = Models.make(item.name, root.Position + Vector3.new(0, 5, 0))
 		carried.Name = "CarriedBrainrot"
 		carried:SetAttribute("OwnerUserId", player.UserId)
-		for _, object in ipairs(carried:GetDescendants()) do if object:IsA("BasePart") then object.Anchored = true end end
+		for _, object in ipairs(carried:GetDescendants()) do
+			if object:IsA("BasePart") then
+				object.Anchored = true
+			end
+		end
 		carried.Parent = character
 		state.carryModel = carried
 	end
-	Notice:FireClient(player, "Bought " .. item.Name .. ". Bring it to your base and press F.")
-	snapshot(player)
+	Remotes.Notice:FireClient(player, "Bought " .. item.name .. ". Bring it to your base and press F.")
+	pushState(player)
 end)
 
-PlaceBrainrot.OnServerEvent:Connect(function(player, slot)
+Remotes.PlaceBrainrot.OnServerEvent:Connect(function(player, slot)
 	local state = states[player]
-	if not state or not state.carry then Notice:FireClient(player, "Buy a brainrot first.") return end
-	if typeof(slot) ~= "number" then return end
+	if state == nil or state.carried == nil then
+		Remotes.Notice:FireClient(player, "Buy a brainrot first.")
+		return
+	end
+	if typeof(slot) ~= "number" then
+		return
+	end
 	slot = math.floor(slot)
-	if slot < 1 or slot > Config.PedestalCount then return end
-	if not playerNearBase(player) then Notice:FireClient(player, "Go to your own base to place it.") return end
-	if state.pedestals[slot] then Notice:FireClient(player, "That pedestal is occupied.") return end
-	state.pedestals[slot] = state.carry
-	if state.carryModel then state.carryModel:Destroy() state.carryModel = nil end
-	makePlaced(player, slot, state.carry)
-	state.carry = nil
-	updateIncome(player)
-	snapshot(player)
-	Notice:FireClient(player, "Placed! Income is now $" .. state.rate .. "/s.")
+	if slot < 1 or slot > Config.PedestalsPerBase then
+		return
+	end
+	if not nearOwnBase(player) then
+		Remotes.Notice:FireClient(player, "Go to your own base to place it.")
+		return
+	end
+	if state.slots[slot] ~= nil then
+		Remotes.Notice:FireClient(player, "That pedestal is occupied.")
+		return
+	end
+	state.slots[slot] = state.carried
+	if state.carryModel ~= nil then
+		state.carryModel:Destroy()
+		state.carryModel = nil
+	end
+	spawnPlaced(player, slot, state.carried)
+	state.carried = nil
+	refreshRate(state)
+	pushState(player)
+	Remotes.Notice:FireClient(player, "Placed! Income is now $" .. state.rate .. "/s.")
 end)
 
-SellBrainrot.OnServerEvent:Connect(function(player, slot)
+Remotes.SellBrainrot.OnServerEvent:Connect(function(player, slot)
 	local state = states[player]
-	if not state or not playerNearBase(player) or typeof(slot) ~= "number" then return end
+	if state == nil or typeof(slot) ~= "number" or not nearOwnBase(player) then
+		return
+	end
 	slot = math.floor(slot)
-	local entry = state.pedestals[slot]
-	local item = entry and Data.Get(entry.name)
-	if not item then return end
-	state.cash += math.floor(item.Price * Config.SellFraction)
-	state.pedestals[slot] = nil
-	clearPlaced(player, slot)
-	updateIncome(player)
-	snapshot(player)
-	Notice:FireClient(player, "Sold for $" .. math.floor(item.Price * Config.SellFraction) .. ".")
+	local entry = state.slots[slot]
+	local item = entry and Data.find(entry.name)
+	if item == nil then
+		return
+	end
+	local refund = math.floor(item.price * Config.SellReturn)
+	state.cash += refund
+	state.slots[slot] = nil
+	removePlaced(player, slot)
+	refreshRate(state)
+	pushState(player)
+	Remotes.Notice:FireClient(player, "Sold for $" .. refund .. ".")
 end)
 
-Rebirth.OnServerEvent:Connect(function(player)
+Remotes.Rebirth.OnServerEvent:Connect(function(player)
 	local state = states[player]
-	if not state then return end
-	local cost = Data.RebirthCost(state.rebirths)
-	if state.cash < cost then Notice:FireClient(player, "Rebirth costs $" .. cost .. ".") return end
-	state.cash = Config.StartCash
+	if state == nil then
+		return
+	end
+	local cost = Data.rebirthPrice(state.rebirths)
+	if state.cash < cost then
+		Remotes.Notice:FireClient(player, "Rebirth costs $" .. cost .. ".")
+		return
+	end
+	state.cash = Config.StartingCash
 	state.rebirths += 1
-	state.multiplier = 1 + state.rebirths * 0.25
-	state.pedestals = {}
-	state.carry = nil
-	if state.carryModel then state.carryModel:Destroy() state.carryModel = nil end
-	local base = baseFor(player)
-	if base then for _, child in ipairs(base:GetChildren()) do if child.Name:match("^Placed_") then child:Destroy() end end end
-	updateIncome(player)
-	snapshot(player)
-	Notice:FireClient(player, "Rebirth complete! Income multiplier x" .. string.format("%.2f", state.multiplier) .. ".")
+	state.boost = 1 + state.rebirths * 0.25
+	state.slots = {}
+	state.carried = nil
+	if state.carryModel ~= nil then
+		state.carryModel:Destroy()
+		state.carryModel = nil
+	end
+	local base = findBase(player)
+	if base ~= nil then
+		for _, child in ipairs(base:GetChildren()) do
+			if child.Name:match("^Placed_") then
+				child:Destroy()
+			end
+		end
+	end
+	refreshRate(state)
+	pushState(player)
+	Remotes.Notice:FireClient(player, "Rebirth complete! Income multiplier x" .. string.format("%.2f", state.boost) .. ".")
 end)
 
-ToggleLock.OnServerEvent:Connect(function(player)
+Remotes.ToggleLock.OnServerEvent:Connect(function(player)
 	local state = states[player]
-	if not state then return end
+	if state == nil then
+		return
+	end
 	local now = os.clock()
-	if now < state.lockCooldownUntil then Notice:FireClient(player, "Lock recharging.") return end
-	state.lockedUntil = now + Config.LockDuration
-	state.lockCooldownUntil = state.lockedUntil + Config.LockCooldown
-	snapshot(player)
-	Notice:FireClient(player, "Base locked for 60 seconds.")
+	if now < state.lockReadyAt then
+		Remotes.Notice:FireClient(player, "Lock recharging.")
+		return
+	end
+	state.lockedUntil = now + Config.BaseLockTime
+	state.lockReadyAt = state.lockedUntil + Config.BaseLockRecharge
+	pushState(player)
+	Remotes.Notice:FireClient(player, "Base locked for 60 seconds.")
 end)
 
+-- Income: every second, each player's rate lands in their cash.
 task.spawn(function()
 	while true do
-		task.wait(Config.IncomeTick)
+		task.wait(Config.IncomePeriod)
 		for player, state in pairs(states) do
-			updateIncome(player)
+			refreshRate(state)
 			local amount = math.floor(state.rate)
 			if amount > 0 then
 				state.cash += amount
-				Income:FireClient(player, amount)
+				Remotes.Income:FireClient(player, amount)
 			end
-			snapshot(player)
+			pushState(player)
 		end
 	end
 end)
 
+-- Market: fresh offers on a fixed cycle.
 task.spawn(function()
-	cycleOffers()
-	while true do task.wait(Config.MarketCycle) cycleOffers() end
+	rotateOffers()
+	while true do
+		task.wait(Config.OfferPeriod)
+		rotateOffers()
+	end
 end)
 
+-- Thief: every cycle, one raid on a random unlocked base.
 task.spawn(function()
 	while true do
-		task.wait(Config.ThiefInterval)
-		local thief = Thief.spawnThief(world, Vector3.new(90, 3, 0))
-		local eligible = {}
+		task.wait(Config.ThiefPeriod)
+		local thief = Thief.create(world, Vector3.new(90, 3, 0))
+		local open = {}
 		for player, state in pairs(states) do
-			if os.clock() >= state.lockedUntil then table.insert(eligible, player) end
+			if os.clock() >= state.lockedUntil then
+				table.insert(open, player)
+			end
 		end
-		if #eligible > 0 then
-			local target = eligible[math.random(1, #eligible)]
-			local targetBase = baseFor(target)
-			if targetBase then
-				local position = targetBase:GetPivot().Position
-				Thief.patrolThief(thief, { Vector3.new(50, 0, 0), Vector3.new(position.X, 0, position.Z) }, 1.5)
+		if #open > 0 then
+			local target = open[math.random(1, #open)]
+			local targetBase = findBase(target)
+			if targetBase ~= nil then
+				local at = targetBase:GetPivot().Position
+				Thief.walk(thief, { Vector3.new(50, 0, 0), Vector3.new(at.X, 0, at.Z) }, 1.5)
 				local state = states[target]
-				local slot, item = Thief.stealFromBase(state)
-				if item then
-					clearPlaced(target, slot)
-					updateIncome(target)
-					Notice:FireClient(target, "THIEF! Stole " .. item.name .. "!")
-					snapshot(target)
+				local slot, item = Thief.rob(state)
+				if item ~= nil then
+					removePlaced(target, slot)
+					refreshRate(state)
+					Remotes.Notice:FireClient(target, "THIEF! Stole " .. item.name .. "!")
+					pushState(target)
 				end
 			end
 		end
-		Thief.fleeThief(thief, Vector3.new(110, 0, -45))
+		Thief.escape(thief, Vector3.new(110, 0, -45))
 	end
 end)
 
+-- Monsoon: a warning, then the wave, on a fixed cycle.
 task.spawn(function()
 	while true do
-		task.wait(Config.MonsoonInterval - Config.MonsoonWarning)
-		local oldAmbient = Monsoon.startWarning(Notice, Config.MonsoonWarning)
-		Monsoon.sweepWave(world, Players, Notice, oldAmbient)
+		task.wait(Config.MonsoonPeriod - Config.MonsoonWarningTime)
+		local oldAmbient = Monsoon.warn(Remotes.Notice, Config.MonsoonWarningTime)
+		Monsoon.wave(world, Players, Remotes.Notice, oldAmbient)
 	end
 end)
