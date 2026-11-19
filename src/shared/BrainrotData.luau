@@ -1,7 +1,9 @@
+-- BRAINROT BAZAAR cast: the twelve food brainrots, their rarities and their math.
 local BrainrotData = {}
 
 BrainrotData.RarityOrder = { "Common", "Rare", "Epic", "Legendary", "Mythic", "Divine" }
-BrainrotData.RarityColors = {
+
+BrainrotData.RarityColor = {
 	Common = Color3.fromRGB(190, 195, 203),
 	Rare = Color3.fromRGB(70, 160, 255),
 	Epic = Color3.fromRGB(180, 80, 255),
@@ -9,41 +11,79 @@ BrainrotData.RarityColors = {
 	Mythic = Color3.fromRGB(235, 65, 75),
 	Divine = Color3.fromRGB(255, 220, 80),
 }
-BrainrotData.RarityWeights = { Common = 45, Rare = 25, Epic = 15, Legendary = 9, Mythic = 5, Divine = 1 }
-BrainrotData.Mutations = { NORMAL = 1, GOLD = 2, DIAMOND = 3, PEDAS = 5 }
 
-BrainrotData.List = {
-	{ Name = "Bakso Bandit", Rarity = "Common", Price = 50, Rate = 1, Description = "A round meatball outlaw with a sack." },
-	{ Name = "Kerupuk Knight", Rarity = "Common", Price = 120, Rate = 2, Description = "A crisp cracker knight with a shield." },
-	{ Name = "Cireng Cyclops", Rarity = "Rare", Price = 350, Rate = 5, Description = "A chewy disc with one enormous eye." },
-	{ Name = "Sate Sensei", Rarity = "Rare", Price = 800, Rate = 9, Description = "A skewer master with a headband and tiny katana." },
-	{ Name = "Gado-Gado Goblin", Rarity = "Epic", Price = 2000, Rate = 18, Description = "A green goblin wearing a peanut bowl hat." },
-	{ Name = "Es Cendol Cyber", Rarity = "Epic", Price = 4500, Rate = 32, Description = "A drink robot with glowing cendol tubes." },
-	{ Name = "Soto Sphinx", Rarity = "Legendary", Price = 9000, Rate = 60, Description = "A soup-bowl sphinx with a golden crown." },
-	{ Name = "Martabak Monster", Rarity = "Legendary", Price = 18000, Rate = 110, Description = "A folded pancake beast with chocolate drips." },
-	{ Name = "Nasi Padang Paladin", Rarity = "Mythic", Price = 40000, Rate = 220, Description = "A rice-mound knight with a rendang sword." },
-	{ Name = "Rendang Rex", Rarity = "Mythic", Price = 90000, Rate = 450, Description = "A saucy little tyrant with a tiny crown." },
-	{ Name = "Es Teh Sultan", Rarity = "Divine", Price = 250000, Rate = 1200, Description = "A sultan seated on a giant iced-tea throne." },
-	{ Name = "Klepon King", Rarity = "Divine", Price = 500000, Rate = 2000, Description = "A green coconut king with a crown and red cape." },
+BrainrotData.RarityWeight = {
+	Common = 45,
+	Rare = 25,
+	Epic = 15,
+	Legendary = 9,
+	Mythic = 5,
+	Divine = 1,
 }
 
-BrainrotData.ByName = {}
-for _, item in ipairs(BrainrotData.List) do
-	item.Color = BrainrotData.RarityColors[item.Rarity]
-	BrainrotData.ByName[item.Name] = item
+BrainrotData.MutationFactor = {
+	NORMAL = 1,
+	GOLD = 2,
+	DIAMOND = 3,
+	PEDAS = 5,
+}
+
+BrainrotData.Order = {
+	"Bakso Bandit",
+	"Kerupuk Knight",
+	"Cireng Cyclops",
+	"Sate Sensei",
+	"Gado-Gado Goblin",
+	"Es Cendol Cyber",
+	"Soto Sphinx",
+	"Martabak Monster",
+	"Nasi Padang Paladin",
+	"Rendang Rex",
+	"Es Teh Sultan",
+	"Klepon King",
+}
+
+BrainrotData.Entries = {
+	["Bakso Bandit"] = { rarity = "Common", price = 50, rate = 1, blurb = "A round meatball outlaw carrying a sack." },
+	["Kerupuk Knight"] = { rarity = "Common", price = 120, rate = 2, blurb = "A crunchy cracker knight with a shield." },
+	["Cireng Cyclops"] = { rarity = "Rare", price = 350, rate = 5, blurb = "A chewy disc with one giant eye." },
+	["Sate Sensei"] = { rarity = "Rare", price = 800, rate = 9, blurb = "A skewer master with a headband and a tiny katana." },
+	["Gado-Gado Goblin"] = { rarity = "Epic", price = 2000, rate = 18, blurb = "A green goblin wearing a peanut-bowl hat." },
+	["Es Cendol Cyber"] = { rarity = "Epic", price = 4500, rate = 32, blurb = "A drink robot with glowing cendol tubes." },
+	["Soto Sphinx"] = { rarity = "Legendary", price = 9000, rate = 60, blurb = "A soup-bowl sphinx wearing a golden crown." },
+	["Martabak Monster"] = { rarity = "Legendary", price = 18000, rate = 110, blurb = "A folded pancake beast with chocolate drips." },
+	["Nasi Padang Paladin"] = { rarity = "Mythic", price = 40000, rate = 220, blurb = "A rice-mound knight with a rendang sword." },
+	["Rendang Rex"] = { rarity = "Mythic", price = 90000, rate = 450, blurb = "A saucy little tyrant with a tiny crown." },
+	["Es Teh Sultan"] = { rarity = "Divine", price = 250000, rate = 1200, blurb = "A sultan seated on a giant iced-tea throne." },
+	["Klepon King"] = { rarity = "Divine", price = 500000, rate = 2000, blurb = "A green coconut king with a crown and a red cape." },
+}
+
+-- Full record for a name, or nil when the name is not in the cast.
+function BrainrotData.find(name)
+	local entry = BrainrotData.Entries[name]
+	if entry == nil then
+		return nil
+	end
+	return {
+		name = name,
+		rarity = entry.rarity,
+		price = entry.price,
+		rate = entry.rate,
+		blurb = entry.blurb,
+		color = BrainrotData.RarityColor[entry.rarity],
+	}
 end
 
-function BrainrotData.Get(name)
-	return BrainrotData.ByName[name]
+-- Rebirth n costs 5000 * (n + 1)^2, where n is the rebirths already done.
+function BrainrotData.rebirthPrice(rebirths)
+	local step = (rebirths or 0) + 1
+	return 5000 * step * step
 end
 
-function BrainrotData.RebirthCost(rebirths)
-	return 5000 * ((rebirths or 0) + 1) ^ 2
-end
-
-function BrainrotData.Income(item, mutation, multiplier)
-	local factor = BrainrotData.Mutations[mutation or "NORMAL"] or 1
-	return item.Rate * factor * (multiplier or 1)
+-- Dollars per second: base rate times the mutation factor times the rebirth boost.
+function BrainrotData.earnPerSecond(entry, mutation, boost)
+	local factor = BrainrotData.MutationFactor[mutation or "NORMAL"] or 1
+	return entry.rate * factor * (boost or 1)
 end
 
 return BrainrotData
