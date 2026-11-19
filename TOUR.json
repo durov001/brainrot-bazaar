@@ -1,1 +1,1 @@
-{"tour":1,"steps":[{"screenshot":"1-start.png","keys":[],"wait":500},{"screenshot":"2-play.png","keys":["E","F"],"wait":2500},{"screenshot":"3-monsoon.png","keys":["L"],"wait":2500}]}
+{"steps":[{"keys":[],"screenshot":"1-start.png","wait":500},{"keys":["E","F"],"screenshot":"2-play.png","wait":2500},{"keys":["L"],"screenshot":"3-monsoon.png","wait":2500}],"tour":1}

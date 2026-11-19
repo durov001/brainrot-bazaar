@@ -1,20 +1,20 @@
-// BRAINROT BAZAAR: build the submission package and raw make.fun dossier.
-import { copyFileSync, cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { buildDossier } from './vendor/makefun-roblox.ts';
+// BRAINROT BAZAAR: copy the entry into the output dir and write its dossier.
+import { copyFileSync, cpSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { basename, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { buildDossier } from "./vendor/makefun-roblox.ts";
 
-const here = fileURLToPath(new URL('.', import.meta.url));
-const out = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
-const notDotted = (path: string): boolean => !basename(path).startsWith('.');
+const root = fileURLToPath(new URL(".", import.meta.url));
+const target = process.env.MAKEFUN_OUTPUT_DIR ?? "/output";
+const skipDotfiles = (p: string): boolean => !basename(p).startsWith(".");
 
-mkdirSync(out, { recursive: true });
-copyFileSync(join(here, 'game.rbxl'), join(out, 'game.rbxl'));
-copyFileSync(join(here, 'PLAY.json'), join(out, 'PLAY.json'));
-cpSync(join(here, 'src'), join(out, 'src'), { recursive: true, filter: notDotted });
-mkdirSync(join(out, 'screenshots'), { recursive: true });
-if (existsSync(join(here, 'screenshots'))) {
-	cpSync(join(here, 'screenshots'), join(out, 'screenshots'), { recursive: true, filter: notDotted });
+mkdirSync(target, { recursive: true });
+copyFileSync(join(root, "game.rbxl"), join(target, "game.rbxl"));
+copyFileSync(join(root, "PLAY.json"), join(target, "PLAY.json"));
+cpSync(join(root, "src"), join(target, "src"), { recursive: true, filter: skipDotfiles });
+mkdirSync(join(target, "screenshots"), { recursive: true });
+if (existsSync(join(root, "screenshots"))) {
+	cpSync(join(root, "screenshots"), join(target, "screenshots"), { recursive: true, filter: skipDotfiles });
 }
 
 const caps = {
@@ -24,5 +24,5 @@ const caps = {
 	scripts_max_source_bytes: 8388608,
 	scripts_max_path_chars: 1048576,
 };
-const dossierBytes = buildDossier(out, caps);
-writeFileSync(join(out, 'dossier.json'), dossierBytes);
+const dossier = buildDossier(target, caps);
+writeFileSync(join(target, "dossier.json"), dossier);
