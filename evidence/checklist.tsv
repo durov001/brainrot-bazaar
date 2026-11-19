@@ -10,7 +10,7 @@ Server state and validation for buy/place/sell/rebirth	pass	src/server/GameServe
 Income tick, rotating offers, carried brainrot	pass	src/server/GameServer.server.luau	static implementation; runtime not assessed
 Thief patrol, lock, steal, flee, red label	pass	src/server/Thief.luau; src/server/GameServer.server.luau	static implementation; runtime not assessed
 Monsoon warning, darkening, wave sweep, shelter return	pass	src/server/Monsoon.luau; src/server/GameServer.server.luau	static implementation; runtime not assessed
-HUD, MY BASE, mission, prompts, title, pause, mute	pass	src/client/Game.client.luau	Startup SoundService access removed. Mute toggles a flag and shows a notice. Runtime not assessed.
+HUD, MY BASE, mission, prompts, title, pause, mute	pass	src/client/Game.client.luau	No SoundService access anywhere; mute is a flag plus a notice. Runtime not assessed.
 Billboard labels and income popups	pass	src/client/Game.client.luau	static implementation; runtime not assessed
 Rojo project, package script, README, tour	pass	default.project.json; main.ts; README.md; TOUR.json	static implementation; runtime not assessed
-Studio boot and screenshot capture	not_assessed	not run — no Studio on Linux	runtime
+Studio boot and screenshot capture	not_assessed	not run - no Studio on Linux	runtime

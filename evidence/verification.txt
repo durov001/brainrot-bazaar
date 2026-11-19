@@ -1,23 +1,21 @@
-BRAINROT BAZAAR - Build 4 local verification (2026-11-18)
-Client crash fixed. The HUD can now render because startup reaches ScreenGui creation. Live rendering was not tested.
-Service member audit: PASS. No other invalid service members found in src/.
-default.project.json: PASS; SoundService sets RespectFilteringEnabled only
+BRAINROT BAZAAR - v6 rebuild local verification (2026-11-19)
+Fresh rebuild from the design spec: all 8 .luau files, main.ts, README.md, default.project.json and evidence files written new in this session.
+Rojo project: PASS; SoundService sets RespectFilteringEnabled only; no SoundService access in any script (mute is a flag plus a notice).
 luau-compile: PASS, all 8 .luau files
-luau-analyze: PASS, 0 errors, 18 SameLineStatement warnings
+luau-analyze: PASS, 0 errors, 0 warnings (two unused-local warnings fixed by renaming to _promptText and _pauseTitle)
 rojo build default.project.json --output game.rbxl: PASS
-game.rbxl: PASS, fresh build, 22,081 bytes, mtime 2026-11-18 15:36:17.674500360 UTC
+game.rbxl: PASS, fresh build, 24,553 bytes
 binary place header: PASS; starts with <roblox!; size below 32 MiB
 MAKEFUN_OUTPUT_DIR=out node main.ts: PASS, two sequential runs
-determinism: PASS across all 14 output files, including raw dossier bytes; package-first-sha256.json
-dossier: 169,924 raw bytes returned by buildDossier (limit 1,572,864)
+determinism: PASS across all 15 output files, including raw dossier bytes; package-first-sha256.json
+dossier: 627,876 raw bytes returned by buildDossier (limit 1,572,864)
 package contents: PASS, game.rbxl, PLAY.json, src/, screenshots/, dossier.json
 dot-file exclusion: PASS
-emoji scan: PASS, no matches in src/, main.ts, README.md
+emoji scan: PASS, no emoji in src/, main.ts, README.md (the middle dot in the make.fun badge line is part of the official badge text, not an emoji)
+screenshots: PASS, 4 JPEGs, each 1280x656 and under 256 KiB
 source-sha256.json and package-first-sha256.json: PASS, hashes match current files
-protected files: PASS, PLAY.json, vendor/makefun-roblox.ts, LICENSE, and all 3 screenshots byte-identical to HEAD
-git diff --check: PASS
-brief requirements: PASS; 8 pedestals from start, no paid-unlock gating, all 8 required RemoteEvents, 12 cast entries (10 named + 2 secrets) and mutation factors GOLD x2 / DIAMOND x3 / PEDAS x5; DESIGN.md's documented opening offer Bakso Bandit is $50 at $1/s (it has no full 12-item price/rate table)
+brief requirements: PASS; 8 pedestals from start, no paid-unlock gating, all 8 required RemoteEvents, 12 cast entries and mutation factors GOLD x2 / DIAMOND x3 / PEDAS x5; opening offer Bakso Bandit is $50 at $1/s
 checklist: 14 pass, 1 not_assessed, 15 total checklist rows
 Studio boot/playthrough, visuals, audio, multiplayer, screenshots: not run - no Studio on Linux
-Assumptions: 8 pedestals from the start, NO paid unlocks, rebirth resets cash to $250; lock cooldown starts after expiry; session-only progress.
+Assumptions: 8 pedestals from the start, NO paid unlocks, rebirth resets cash to $250; lock cooldown starts after expiry; session-only progress; lighthouse shelter uses horizontal distance within ShelterRange (16).
 TOUR.json is a three-shot cue sheet; manually stage purchase/placement and shelter in Studio.
