@@ -1,156 +1,209 @@
--- BRAINROT BAZAAR world: the floating market, its docks, bases and landmarks.
+-- World.luau — builds the floating market: water, docks, stalls, bases,
+-- conveyor, lighthouse, lanterns, boats and palms, all from PartKit.
+
+local Config = require(script.Parent.Parent.Shared.Config)
+local PartKit = require(script.Parent.Parent.Shared.PartKit)
+
 local World = {}
 
-local WOOD = Color3.fromRGB(116, 65, 38)
-local TRIM = Color3.fromRGB(210, 117, 45)
-local WATER = Color3.fromRGB(24, 150, 157)
-local LEAF = Color3.fromRGB(52, 125, 76)
+local WOOD = Color3.fromRGB(140, 95, 55)
+local WOOD_DARK = Color3.fromRGB(105, 70, 40)
+local TEAL = Color3.fromRGB(24, 150, 157)
+local NEON_RED = Color3.fromRGB(255, 80, 50)
+local NEON_CYAN = Color3.fromRGB(60, 220, 255)
+local LEAF = Color3.fromRGB(50, 150, 70)
+local TRUNK = Color3.fromRGB(110, 75, 40)
+local ROOF_RED = Color3.fromRGB(180, 50, 45)
 
--- Make one instance, set its properties from a table, then parent it.
-local function make(className, parent, props)
-	local inst = Instance.new(className)
-	for key, value in pairs(props) do
-		inst[key] = value
-	end
-	inst.Parent = parent
-	return inst
+local function buildWater(folder)
+	local water = PartKit.Box(folder, Config.WaterSize, Config.WaterPosition, TEAL, Enum.Material.Glass)
+	water.Name = "Sea"
+	water.Transparency = 0.25
 end
 
--- One anchored wooden-style slab, smooth top and bottom.
-local function slab(parent, name, size, at, color, material, seeThrough)
-	return make("Part", parent, {
-		Name = name,
-		Size = size,
-		Position = at,
-		Anchored = true,
-		Color = color,
-		Material = material or Enum.Material.Wood,
-		Transparency = seeThrough or 0,
-		TopSurface = Enum.SurfaceType.Smooth,
-		BottomSurface = Enum.SurfaceType.Smooth,
+local function buildDock(folder)
+	PartKit.Box(folder, Config.DockSize, Config.DockPosition, WOOD, Enum.Material.WoodPlanks).Name = "MainDock"
+	local bridges = {
+		{ size = Vector3.new(10, 2, 40), pos = Vector3.new(-60, 0, -30) },
+		{ size = Vector3.new(10, 2, 40), pos = Vector3.new(60, 0, -30) },
+		{ size = Vector3.new(10, 2, 40), pos = Vector3.new(0, 0, 32) },
+	}
+	for i, bridge in ipairs(bridges) do
+		local part = PartKit.Box(folder, bridge.size, bridge.pos, WOOD_DARK, Enum.Material.WoodPlanks)
+		part.Name = "Bridge" .. i
+	end
+	for x = -85, 85, 17 do
+		PartKit.Cylinder(folder, 6, 1.2, Vector3.new(x, -2, -12), WOOD_DARK, Enum.Material.Wood).Name = "Post"
+		PartKit.Cylinder(folder, 6, 1.2, Vector3.new(x, -2, 12), WOOD_DARK, Enum.Material.Wood).Name = "Post"
+	end
+end
+
+local function buildStall(folder, position, index)
+	local stall = Instance.new("Folder")
+	stall.Name = "Stall" .. index
+	stall.Parent = folder
+	local counter = PartKit.Box(stall, Vector3.new(8, 3, 4), position + Vector3.new(0, 1.5, 0), WOOD, Enum.Material.WoodPlanks)
+	counter.Name = "Counter"
+	PartKit.Cylinder(stall, 7, 0.6, position + Vector3.new(-3.5, 5, -1.5), WOOD_DARK, Enum.Material.Wood).Name = "PostL"
+	PartKit.Cylinder(stall, 7, 0.6, position + Vector3.new(3.5, 5, -1.5), WOOD_DARK, Enum.Material.Wood).Name = "PostR"
+	local roof = PartKit.Box(stall, Vector3.new(10, 0.6, 6), position + Vector3.new(0, 8, 0), ROOF_RED, Enum.Material.SmoothPlastic)
+	roof.Name = "Roof"
+	local anchor = PartKit.Part(stall, {
+		Name = "OfferAnchor",
+		Size = Vector3.new(1, 1, 1),
+		Position = position + Vector3.new(0, 6, 0),
+		Transparency = 1,
+		CanCollide = false,
 	})
+	return anchor
 end
 
-local function water(root)
-	slab(root, "TealWater", Vector3.new(280, 2, 220), Vector3.new(0, -4, 0), WATER, Enum.Material.Glass, 0.12)
-end
-
-local function docks(root)
-	local folder = make("Folder", root, { Name = "FloatingDocks" })
-	slab(folder, "MainDock", Vector3.new(180, 2, 22), Vector3.new(0, 0, 0), WOOD)
-	slab(folder, "NorthBridge", Vector3.new(18, 2, 95), Vector3.new(0, 0, 55), WOOD)
-	slab(folder, "EastBridge", Vector3.new(64, 2, 12), Vector3.new(85, 0, 40), WOOD)
-	slab(folder, "WestBridge", Vector3.new(64, 2, 12), Vector3.new(-85, 0, 40), WOOD)
-	for x = -80, 80, 20 do
-		slab(folder, "DockPost_" .. x, Vector3.new(2, 12, 2), Vector3.new(x, -4, 0), TRIM)
+local function buildBase(folder, center, index)
+	local base = Instance.new("Folder")
+	base.Name = "Base" .. index
+	base.Parent = folder
+	local floor = PartKit.Box(base, Vector3.new(38, 2, 32), center, WOOD, Enum.Material.WoodPlanks)
+	floor.Name = "Floor"
+	local roof = PartKit.Box(base, Vector3.new(40, 1, 34), center + Vector3.new(0, 14, 0), ROOF_RED, Enum.Material.SmoothPlastic)
+	roof.Name = "Roof"
+	for _, corner in ipairs({ Vector3.new(-18, 7, -15), Vector3.new(18, 7, -15), Vector3.new(-18, 7, 15), Vector3.new(18, 7, 15) }) do
+		PartKit.Cylinder(base, 14, 0.8, center + corner, WOOD_DARK, Enum.Material.Wood).Name = "RoofPost"
 	end
-	make("SpawnLocation", root, {
-		Name = "DockSpawn",
-		Position = Vector3.new(0, 4, -5),
-		Size = Vector3.new(12, 1, 8),
-		Anchored = true,
-		Neutral = true,
-		Color = TRIM,
-	})
-end
-
-local function stalls(root)
-	local folder = make("Folder", root, { Name = "MarketStalls" })
-	for i = 1, 4 do
-		local x = (i - 2.5) * 42
-		local stall = make("Model", folder, { Name = "MarketStall_" .. i })
-		slab(stall, "Counter", Vector3.new(28, 3, 10), Vector3.new(x, 3, 32), WOOD)
-		slab(stall, "Roof", Vector3.new(30, 1, 14), Vector3.new(x, 15, 32), TRIM)
-		slab(stall, "PostL", Vector3.new(1, 14, 1), Vector3.new(x - 13, 9, 27), WOOD)
-		slab(stall, "PostR", Vector3.new(1, 14, 1), Vector3.new(x + 13, 9, 27), WOOD)
-	end
-end
-
-local function bases(root)
-	local folder = make("Folder", root, { Name = "PlayerBases" })
-	for i = 1, 8 do
-		local x = ((i - 1) % 4 - 1.5) * 42
-		local z = 78 + math.floor((i - 1) / 4) * 38
-		local base = make("Model", folder, { Name = "Base_" .. i })
-		base:SetAttribute("BaseIndex", i)
-		slab(base, "BaseFloor", Vector3.new(38, 1, 32), Vector3.new(x, 1, z), WOOD)
-		for slot = 1, 8 do
-			local px = x + ((slot - 1) % 4 - 1.5) * 8
-			local pz = z + (math.floor((slot - 1) / 4) - 0.5) * 11
-			slab(base, "Pedestal_" .. slot, Vector3.new(4, 2, 4), Vector3.new(px, 3, pz), TRIM)
+	local signPart = PartKit.Box(base, Vector3.new(10, 3, 0.6), center + Vector3.new(0, 11, -16), WOOD_DARK, Enum.Material.WoodPlanks)
+	signPart.Name = "Sign"
+	local signGui = Instance.new("SurfaceGui")
+	signGui.Name = "SignGui"
+	signGui.Face = Enum.NormalId.Front
+	signGui.Parent = signPart
+	local signText = Instance.new("TextLabel")
+	signText.Name = "SignText"
+	signText.Size = UDim2.new(1, 0, 1, 0)
+	signText.BackgroundTransparency = 1
+	signText.Font = Enum.Font.GothamBold
+	signText.TextSize = 28
+	signText.TextColor3 = Color3.fromRGB(255, 240, 200)
+	signText.Text = "BASE " .. index
+	signText.Parent = signGui
+	local pedestals = {}
+	local slot = 1
+	for _, dz in ipairs({ -6, 6 }) do
+		for _, dx in ipairs({ -12, -4, 4, 12 }) do
+			local top = PartKit.Cylinder(base, 1, 4.5, center + Vector3.new(dx, 1.5, dz), Color3.fromRGB(200, 180, 140), Enum.Material.Marble)
+			top.Name = "Pedestal" .. slot
+			pedestals[slot] = center + Vector3.new(dx, 2, dz)
+			slot += 1
 		end
-		slab(base, "Roof", Vector3.new(39, 1, 33), Vector3.new(x, 15, z), TRIM)
-		slab(base, "Sign", Vector3.new(12, 3, 1), Vector3.new(x, 10, z - 15), Color3.fromRGB(241, 213, 130))
+	end
+	return {
+		Folder = base,
+		Center = center,
+		Pedestals = pedestals,
+		SignText = signText,
+	}
+end
+
+local function buildConveyor(folder)
+	local belt = PartKit.Box(folder, Vector3.new(130, 1, 8), Vector3.new(0, 0.5, 40), Color3.fromRGB(60, 60, 70), Enum.Material.Metal)
+	belt.Name = "Conveyor"
+	for x = -60, 60, 10 do
+		local stripe = PartKit.Box(folder, Vector3.new(1.5, 0.2, 8), Vector3.new(x, 1.1, 40), NEON_CYAN, Enum.Material.Neon)
+		stripe.Name = "Stripe"
 	end
 end
 
-local function belt(root)
-	slab(root, "BrainrotConveyor", Vector3.new(130, 1, 7), Vector3.new(0, 5, 51), Color3.fromRGB(52, 52, 60), Enum.Material.Metal)
-	for x = -60, 60, 12 do
-		slab(root, "ConveyorStripe_" .. x, Vector3.new(2, 0.2, 7), Vector3.new(x, 5.6, 51), TRIM, Enum.Material.Neon)
+local function buildLighthouse(folder)
+	local tower = PartKit.Cylinder(folder, 26, 8, Config.LighthousePosition + Vector3.new(0, 13, 0), Color3.fromRGB(240, 235, 220), Enum.Material.Concrete)
+	tower.Name = "LighthouseTower"
+	local beacon = PartKit.Ball(folder, 3, Config.LighthousePosition + Vector3.new(0, 28, 0), NEON_CYAN, Enum.Material.Neon)
+	beacon.Name = "Beacon"
+	local light = Instance.new("PointLight")
+	light.Color = NEON_CYAN
+	light.Range = 40
+	light.Brightness = 2
+	light.Parent = beacon
+	local cap = PartKit.Cylinder(folder, 2, 10, Config.LighthousePosition + Vector3.new(0, 31, 0), ROOF_RED, Enum.Material.SmoothPlastic)
+	cap.Name = "LighthouseRoof"
+end
+
+local function buildLanterns(folder)
+	for i = 1, 9 do
+		local x = -80 + (i - 1) * 20
+		local z = (i % 2 == 0) and -13 or 13
+		local pole = PartKit.Cylinder(folder, 8, 0.5, Vector3.new(x, 4, z), WOOD_DARK, Enum.Material.Wood)
+		pole.Name = "LanternPole" .. i
+		local lamp = PartKit.Ball(folder, 1.2, Vector3.new(x, 8.5, z), NEON_RED, Enum.Material.Neon)
+		lamp.Name = "Lantern" .. i
+		local light = Instance.new("PointLight")
+		light.Color = NEON_RED
+		light.Range = 18
+		light.Brightness = 1.5
+		light.Parent = lamp
 	end
 end
 
-local function beacon(root)
-	local tower = make("Model", root, { Name = "LighthouseShelter" })
-	slab(tower, "Tower", Vector3.new(12, 30, 12), Vector3.new(112, 13, 76), Color3.fromRGB(238, 238, 221), Enum.Material.Concrete)
-	slab(tower, "Beacon", Vector3.new(15, 4, 15), Vector3.new(112, 30, 76), Color3.fromRGB(255, 198, 64), Enum.Material.Neon)
-	slab(tower, "LighthouseRoof", Vector3.new(16, 2, 16), Vector3.new(112, 33, 76), TRIM)
-	tower:SetAttribute("Shelter", true)
-end
-
-local function lights(root)
-	local folder = make("Folder", root, { Name = "Lanterns" })
-	for i = -4, 4 do
-		local lamp = slab(folder, "Lantern_" .. i, Vector3.new(2, 3, 2), Vector3.new(i * 20, 10, 18), Color3.fromRGB(255, 90, 30), Enum.Material.Neon)
-		make("PointLight", lamp, {
-			Color = Color3.fromRGB(255, 120, 50),
-			Range = 24,
-			Brightness = 1.5,
-		})
+local function buildBoats(folder)
+	local spots = { Vector3.new(-100, -2, 40), Vector3.new(100, -2, -40), Vector3.new(40, -2, -90) }
+	for i, spot in ipairs(spots) do
+		local boat = Instance.new("Folder")
+		boat.Name = "Boat" .. i
+		boat.Parent = folder
+		local hull = PartKit.Box(boat, Vector3.new(12, 2, 5), spot, WOOD_DARK, Enum.Material.Wood)
+		hull.Name = "Hull"
+		PartKit.Cylinder(boat, 10, 0.5, spot + Vector3.new(0, 6, 0), WOOD, Enum.Material.Wood).Name = "Mast"
+		local sail = PartKit.Box(boat, Vector3.new(0.4, 7, 6), spot + Vector3.new(0, 7, 0), Color3.fromRGB(250, 245, 230), Enum.Material.Fabric)
+		sail.Name = "Sail"
 	end
 end
 
-local function boats(root)
-	local folder = make("Folder", root, { Name = "Boats" })
-	for i = 1, 3 do
-		local x = -95 + i * 45
-		slab(folder, "BoatHull_" .. i, Vector3.new(22, 3, 7), Vector3.new(x, -1, -32), WOOD)
-		slab(folder, "BoatMast_" .. i, Vector3.new(1, 14, 1), Vector3.new(x, 6, -32), TRIM)
-		slab(folder, "BoatSail_" .. i, Vector3.new(1, 8, 8), Vector3.new(x + 3, 8, -32), Color3.fromRGB(235, 220, 180))
-	end
-end
-
-local function palms(root)
-	local folder = make("Folder", root, { Name = "PalmTrees" })
-	for i = 1, 6 do
-		local x = -115 + (i % 3) * 115
-		local z = 20 + math.floor(i / 3) * 70
-		slab(folder, "PalmTrunk_" .. i, Vector3.new(2, 18, 2), Vector3.new(x, 8, z), Color3.fromRGB(107, 72, 36))
+local function buildPalms(folder)
+	local spots = {
+		Vector3.new(-70, 0, -45),
+		Vector3.new(70, 0, -45),
+		Vector3.new(-70, 0, 45),
+		Vector3.new(70, 0, 45),
+		Vector3.new(-110, 0, 0),
+		Vector3.new(110, 0, 0),
+	}
+	for i, spot in ipairs(spots) do
+		local palm = Instance.new("Folder")
+		palm.Name = "Palm" .. i
+		palm.Parent = folder
+		local trunk = PartKit.Cylinder(palm, 12, 1.2, spot + Vector3.new(0, 6, 0), TRUNK, Enum.Material.Wood)
+		trunk.Name = "Trunk"
 		for leaf = 1, 4 do
-			local angle = leaf * math.pi / 2
-			slab(folder, "PalmLeaf_" .. i .. "_" .. leaf, Vector3.new(1, 1, 12), Vector3.new(x + math.cos(angle) * 4, 18, z + math.sin(angle) * 4), LEAF)
+			local angle = (leaf - 1) * math.pi / 2
+			local leafPart = PartKit.Box(palm, Vector3.new(7, 0.3, 1.6), spot + Vector3.new(math.cos(angle) * 3.5, 12, math.sin(angle) * 3.5), LEAF, Enum.Material.Grass)
+			leafPart.Name = "Leaf" .. leaf
+			leafPart.Orientation = Vector3.new(0, math.deg(angle), 25)
 		end
 	end
 end
 
--- Build the whole market fresh under Workspace, replacing any earlier one.
-function World.assemble()
-	local old = workspace:FindFirstChild("BazaarWorld")
-	if old then
-		old:Destroy()
+function World.Build()
+	local folder = Instance.new("Folder")
+	folder.Name = "BazaarWorld"
+	folder.Parent = workspace
+	buildWater(folder)
+	buildDock(folder)
+	local stallAnchors = {}
+	for i, position in ipairs(Config.StallPositions) do
+		stallAnchors[i] = buildStall(folder, position, i)
 	end
-	local root = make("Folder", workspace, { Name = "BazaarWorld" })
-	water(root)
-	docks(root)
-	stalls(root)
-	bases(root)
-	belt(root)
-	beacon(root)
-	lights(root)
-	boats(root)
-	palms(root)
-	return root
+	local bases = {}
+	for i, position in ipairs(Config.BasePositions) do
+		bases[i] = buildBase(folder, position, i)
+	end
+	buildConveyor(folder)
+	buildLighthouse(folder)
+	buildLanterns(folder)
+	buildBoats(folder)
+	buildPalms(folder)
+	return {
+		Folder = folder,
+		Bases = bases,
+		StallAnchors = stallAnchors,
+		LighthousePosition = Config.LighthousePosition,
+	}
 end
 
 return World

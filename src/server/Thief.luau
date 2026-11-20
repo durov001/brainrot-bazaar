@@ -1,82 +1,65 @@
--- BRAINROT BAZAAR thief: the dark prowler who raids unlocked bases.
+-- Thief.luau — the shadow that patrols unlocked bases. A dark floating
+-- orb with a red THIEF label: it glides to a base, takes the highest
+-- occupied pedestal item, and drifts away.
+
+local PartKit = require(script.Parent.Parent.Shared.PartKit)
+
 local Thief = {}
 
--- Spawn the thief model: a dark body and head with a red THIEF label.
-function Thief.create(parent, at)
+local SPEED = 9
+
+local function glide(model, from, to)
+	local distance = (to - from).Magnitude
+	local steps = math.max(1, math.floor(distance / (SPEED * 0.05)))
+	for step = 1, steps do
+		local alpha = step / steps
+		local nextPos = from:Lerp(to, alpha)
+		model:PivotTo(CFrame.new(nextPos))
+		task.wait(0.05)
+	end
+end
+
+local function buildThief(position)
 	local model = Instance.new("Model")
-	model.Name = "BazaarThief"
-	local body = Instance.new("Part")
-	body.Name = "Body"
-	body.Size = Vector3.new(3, 5, 2)
-	body.Position = at
-	body.Color = Color3.fromRGB(45, 45, 52)
-	body.Parent = model
-	local head = Instance.new("Part")
-	head.Name = "Head"
-	head.Shape = Enum.PartType.Ball
-	head.Size = Vector3.new(3, 3, 3)
-	head.Position = at + Vector3.new(0, 4, 0)
-	head.Color = Color3.fromRGB(65, 55, 55)
-	head.Parent = model
-	local tag = Instance.new("BillboardGui")
-	tag.Name = "ThiefAlert"
-	tag.Size = UDim2.fromOffset(150, 45)
-	tag.StudsOffset = Vector3.new(0, 4, 0)
-	tag.AlwaysOnTop = true
-	tag.Parent = head
-	local text = Instance.new("TextLabel")
-	text.Size = UDim2.fromScale(1, 1)
-	text.BackgroundTransparency = 1
-	text.Text = "THIEF!"
-	text.TextColor3 = Color3.fromRGB(255, 30, 25)
-	text.TextScaled = true
-	text.Font = Enum.Font.GothamBlack
-	text.Parent = tag
+	model.Name = "Thief"
+	local body = PartKit.Ball(model, 2, position, Color3.fromRGB(25, 25, 35), Enum.Material.Neon)
+	body.Name = "Shadow"
+	body.Transparency = 0.25
+	PartKit.Ball(model, 0.4, position + Vector3.new(-0.7, 0.5, 1.8), Color3.fromRGB(255, 40, 40), Enum.Material.Neon).Name = "EyeL"
+	PartKit.Ball(model, 0.4, position + Vector3.new(0.7, 0.5, 1.8), Color3.fromRGB(255, 40, 40), Enum.Material.Neon).Name = "EyeR"
+	PartKit.Label(body, "THIEF", Color3.fromRGB(255, 60, 60), 5)
 	model.PrimaryPart = body
-	model.Parent = parent
+	model.Parent = workspace
 	return model
 end
 
--- Walk the thief through waypoints, pausing at each one.
-function Thief.walk(thief, waypoints, dwell)
-	if thief == nil or thief.Parent == nil or #waypoints == 0 then
-		return
-	end
-	for _, point in ipairs(waypoints) do
-		if thief.Parent == nil then
+-- target: { BaseCenter, Pedestals, IsLocked, OnStolen(index) }
+-- Pedestals is an array of 8 entries, each a table or false.
+function Thief.Run(target)
+	task.spawn(function()
+		local entry = Vector3.new(-130, 6, target.BaseCenter.Z + 30)
+		local exitPoint = Vector3.new(130, 6, target.BaseCenter.Z - 30)
+		local thief = buildThief(entry)
+		local hover = target.BaseCenter + Vector3.new(0, 6, 0)
+		glide(thief, entry, hover)
+		if target.IsLocked() then
+			glide(thief, hover, exitPoint)
+			thief:Destroy()
 			return
 		end
-		thief:PivotTo(CFrame.new(point + Vector3.new(0, 3, 0)))
-		task.wait(dwell or 1.5)
-	end
-end
-
--- Steal the highest-index filled slot of a base state. A locked base refuses.
--- Returns the slot and the stolen entry, or nil when nothing can be taken.
-function Thief.rob(state)
-	if state == nil then
-		return nil
-	end
-	if os.clock() < (state.lockedUntil or 0) then
-		return nil
-	end
-	for slot = #state.slots, 1, -1 do
-		local entry = state.slots[slot]
-		if entry ~= nil then
-			state.slots[slot] = nil
-			return slot, entry
+		local victim = 0
+		for index = 1, #target.Pedestals do
+			if target.Pedestals[index] then
+				victim = index
+			end
 		end
-	end
-	return nil
-end
-
--- Teleport the thief to the exit and remove it.
-function Thief.escape(thief, exitAt)
-	if thief ~= nil and thief.Parent ~= nil then
-		thief:PivotTo(CFrame.new(exitAt + Vector3.new(0, 3, 0)))
-		task.wait(0.5)
+		if victim > 0 then
+			target.OnStolen(victim)
+			task.wait(1)
+		end
+		glide(thief, hover, exitPoint)
 		thief:Destroy()
-	end
+	end)
 end
 
 return Thief

@@ -1,92 +1,106 @@
--- BRAINROT BAZAAR models: all twelve characters built from parts, with big faces.
-local Models = {}
+-- BrainrotModels.luau — builds the twelve food characters from parts.
+-- Every character is a ball body with a big face; the three heroes get
+-- their own silhouettes, the rest a coloured topper.
 
--- Body colors for the nine characters without a hero builder.
-local BODY_COLORS = {
-	["Kerupuk Knight"] = Color3.fromRGB(223, 175, 75),
-	["Cireng Cyclops"] = Color3.fromRGB(225, 190, 150),
-	["Gado-Gado Goblin"] = Color3.fromRGB(65, 165, 75),
-	["Es Cendol Cyber"] = Color3.fromRGB(90, 210, 180),
-	["Soto Sphinx"] = Color3.fromRGB(220, 150, 60),
-	["Martabak Monster"] = Color3.fromRGB(104, 59, 35),
-	["Nasi Padang Paladin"] = Color3.fromRGB(245, 230, 180),
-	["Rendang Rex"] = Color3.fromRGB(155, 56, 38),
-	["Es Teh Sultan"] = Color3.fromRGB(205, 145, 55),
+local BrainrotData = require(script.Parent.Parent.Shared.BrainrotData)
+local PartKit = require(script.Parent.Parent.Shared.PartKit)
+
+local BrainrotModels = {}
+
+local RADIUS = {
+	Common = 1.5,
+	Rare = 1.8,
+	Epic = 2.1,
+	Legendary = 2.4,
+	Mythic = 2.7,
+	Divine = 3.0,
 }
 
--- One loose part of a character: no collision, so models never snag the player.
-local function chunk(model, name, size, at, color, shape)
-	local p = Instance.new("Part")
-	p.Name = name
-	p.Size = size
-	p.Position = at
-	p.Color = color
-	p.Anchored = false
-	p.CanCollide = false
-	p.Shape = shape or Enum.PartType.Block
-	p.Parent = model
-	return p
+local TOPPER_COLORS = {
+	["Kerupuk Knight"] = Color3.fromRGB(200, 170, 60),
+	["Cireng Cyclops"] = Color3.fromRGB(255, 255, 255),
+	["Gado-Gado Goblin"] = Color3.fromRGB(120, 80, 30),
+	["Es Cendol Cyber"] = Color3.fromRGB(60, 255, 200),
+	["Soto Sphinx"] = Color3.fromRGB(255, 215, 0),
+	["Martabak Monster"] = Color3.fromRGB(60, 35, 20),
+	["Nasi Padang Paladin"] = Color3.fromRGB(200, 40, 40),
+	["Rendang Rex"] = Color3.fromRGB(255, 215, 0),
+	["Es Teh Sultan"] = Color3.fromRGB(255, 240, 180),
+}
+
+local function addTopper(model, body, radius, color)
+	local topper = PartKit.Ball(model, radius * 0.45, body.Position + Vector3.new(0, radius * 1.25, 0), color)
+	topper.Name = "Topper"
 end
 
--- Two ball eyes and a wide mouth on the front of a body.
-local function addFace(model, at, s)
-	chunk(model, "EyeL", Vector3.new(s, s, s), at + Vector3.new(-s, s, -s), Color3.new(0, 0, 0), Enum.PartType.Ball)
-	chunk(model, "EyeR", Vector3.new(s, s, s), at + Vector3.new(s, s, -s), Color3.new(0, 0, 0), Enum.PartType.Ball)
-	chunk(model, "Mouth", Vector3.new(s * 2.5, s / 2, s / 3), at + Vector3.new(0, -s, -s), Color3.fromRGB(80, 20, 25))
+local function buildGeneric(model, entry, radius, position)
+	local body = PartKit.Ball(model, radius, position, entry.Body)
+	body.Name = "Body"
+	PartKit.Face(body, radius)
+	local topperColor = TOPPER_COLORS[entry.Name]
+	if topperColor then
+		addTopper(model, body, radius, topperColor)
+	end
+	return body
 end
 
--- A round food body with a face: the base every round character starts from.
-local function roundBody(name, color, at)
+local function buildBakso(model, entry, radius, position)
+	local body = PartKit.Ball(model, radius, position, entry.Body)
+	body.Name = "Body"
+	PartKit.Face(body, radius)
+	local mask = PartKit.Box(model, Vector3.new(radius * 1.5, radius * 0.5, radius * 0.2), position + Vector3.new(0, radius * 0.25, radius * 0.85), Color3.fromRGB(15, 15, 20))
+	mask.Name = "Mask"
+	local sack = PartKit.Ball(model, radius * 0.6, position + Vector3.new(radius * 1.3, -radius * 0.4, 0), Color3.fromRGB(170, 140, 90))
+	sack.Name = "Sack"
+	return body
+end
+
+local function buildSate(model, entry, radius, position)
+	local stick = PartKit.Cylinder(model, radius * 4, radius * 0.7, position + Vector3.new(0, radius, 0), Color3.fromRGB(210, 170, 110), Enum.Material.Wood)
+	stick.Name = "Skewer"
+	local body = PartKit.Ball(model, radius, position + Vector3.new(0, radius * 0.8, 0), entry.Body)
+	body.Name = "Body"
+	PartKit.Face(body, radius)
+	local band = PartKit.Box(model, Vector3.new(radius * 1.9, radius * 0.35, radius * 0.2), position + Vector3.new(0, radius * 1.6, radius * 0.8), Color3.fromRGB(220, 40, 40))
+	band.Name = "Headband"
+	local blade = PartKit.Box(model, Vector3.new(0.2, radius * 2, radius * 0.4), position + Vector3.new(radius * 1.4, radius * 0.5, 0), Color3.fromRGB(220, 225, 235), Enum.Material.Metal)
+	blade.Name = "Katana"
+	return body
+end
+
+local function buildKlepon(model, entry, radius, position)
+	local body = PartKit.Ball(model, radius, position, entry.Body)
+	body.Name = "Body"
+	PartKit.Face(body, radius)
+	local crown = PartKit.Cylinder(model, radius * 0.7, radius * 1.1, position + Vector3.new(0, radius * 1.35, 0), Color3.fromRGB(255, 215, 0), Enum.Material.Metal)
+	crown.Name = "Crown"
+	local cape = PartKit.Box(model, Vector3.new(radius * 1.6, radius * 1.8, radius * 0.15), position + Vector3.new(0, -radius * 0.2, -radius * 1.05), Color3.fromRGB(190, 25, 25), Enum.Material.Fabric)
+	cape.Name = "Cape"
+	return body
+end
+
+local HEROES = {
+	["Bakso Bandit"] = buildBakso,
+	["Sate Sensei"] = buildSate,
+	["Klepon King"] = buildKlepon,
+}
+
+function BrainrotModels.Build(name, position, displayRate)
+	local entry = BrainrotData.Find(name)
+	if not entry then
+		return nil
+	end
+	local radius = RADIUS[entry.Rarity] or 1.5
 	local model = Instance.new("Model")
-	model.Name = name
-	chunk(model, "FoodBody", Vector3.new(4, 4, 4), at, color, Enum.PartType.Ball)
-	addFace(model, at, 0.35)
+	model.Name = entry.Name
+	local builder = HEROES[entry.Name] or buildGeneric
+	local center = position + Vector3.new(0, radius, 0)
+	local body = builder(model, entry, radius, center)
+	model.PrimaryPart = body
+	local rarityColor = BrainrotData.RarityColors[entry.Rarity]
+	local labelText = entry.Name .. "\n" .. entry.Rarity .. "  $" .. displayRate .. "/s"
+	PartKit.Label(body, labelText, rarityColor, radius + 3)
 	return model
 end
 
-local function baksoBandit(at)
-	local model = roundBody("BaksoBandit", Color3.fromRGB(149, 86, 48), at)
-	chunk(model, "BlackBanditMask", Vector3.new(3.6, 1, 0.5), at + Vector3.new(0, 0.7, -2), Color3.fromRGB(20, 20, 24))
-	chunk(model, "Sack", Vector3.new(2.2, 2.4, 1.6), at + Vector3.new(2.5, -1, 0), Color3.fromRGB(170, 125, 62), Enum.PartType.Ball)
-	return model
-end
-
-local function sateSensei(at)
-	local model = Instance.new("Model")
-	model.Name = "SateSensei"
-	chunk(model, "SkewerBody", Vector3.new(1.7, 6, 1.7), at + Vector3.new(0, 1, 0), Color3.fromRGB(190, 120, 65), Enum.PartType.Cylinder)
-	addFace(model, at + Vector3.new(0, 4, 0), 0.3)
-	chunk(model, "Headband", Vector3.new(2.4, 0.35, 2.4), at + Vector3.new(0, 5.2, 0), Color3.fromRGB(185, 35, 45))
-	chunk(model, "Katana", Vector3.new(0.25, 4, 0.25), at + Vector3.new(1.8, 2, 0), Color3.fromRGB(220, 225, 235), Enum.PartType.Cylinder)
-	return model
-end
-
-local function kleponKing(at)
-	local model = roundBody("KleponKing", Color3.fromRGB(83, 190, 95), at)
-	chunk(model, "Crown", Vector3.new(3.5, 1.2, 3.5), at + Vector3.new(0, 3, 0), Color3.fromRGB(255, 210, 55))
-	chunk(model, "Cape", Vector3.new(3.8, 4, 0.5), at + Vector3.new(0, 0, 2.4), Color3.fromRGB(190, 38, 44))
-	return model
-end
-
--- Every other character: a round body, a face, and a little topper ball.
-local function plain(name, at, color)
-	local model = roundBody(name, color, at)
-	chunk(model, "Topper", Vector3.new(1.8, 1.8, 1.8), at + Vector3.new(0, 2.9, 0), color, Enum.PartType.Ball)
-	return model
-end
-
--- Build one character model by its display name, at a world position.
-function Models.make(name, at)
-	if name == "Bakso Bandit" then
-		return baksoBandit(at)
-	end
-	if name == "Sate Sensei" then
-		return sateSensei(at)
-	end
-	if name == "Klepon King" then
-		return kleponKing(at)
-	end
-	return plain(name, at, BODY_COLORS[name] or Color3.new(1, 1, 1))
-end
-
-return Models
+return BrainrotModels

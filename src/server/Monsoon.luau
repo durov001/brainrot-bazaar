@@ -1,88 +1,80 @@
--- BRAINROT BAZAAR monsoon: the warning, the darkening sky and the sweeping wave.
+-- Monsoon.luau — the storm cycle. A 30-second warning darkens the sky,
+-- then a neon wave sweeps the map and carries unsheltered players back
+-- to spawn. Shelter is a base roof or the lighthouse.
+
+local Config = require(script.Parent.Parent.Shared.Config)
+
 local Monsoon = {}
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local DARK_AMBIENT = Color3.fromRGB(38, 38, 51)
 
--- A character is sheltered under a base roof or close to the lighthouse.
-function Monsoon.sheltered(character)
-	if character == nil then
-		return false
-	end
+function Monsoon.IsSheltered(character, bases, lighthousePosition)
 	local root = character:FindFirstChild("HumanoidRootPart")
-	if root == nil then
-		return false
+	if not root then
+		return true
 	end
-	local world = workspace:FindFirstChild("BazaarWorld")
-	if world == nil then
-		return false
-	end
-	local lighthouse = world:FindFirstChild("LighthouseShelter")
-	if lighthouse ~= nil then
-		local pivot = lighthouse:GetPivot().Position
-		local dx = root.Position.X - pivot.X
-		local dz = root.Position.Z - pivot.Z
-		if math.sqrt(dx * dx + dz * dz) <= Config.ShelterRange then
+	local pos = root.Position
+	for _, base in ipairs(bases) do
+		local dx = math.abs(pos.X - base.Center.X)
+		local dz = math.abs(pos.Z - base.Center.Z)
+		if dx < 18 and dz < 15 then
 			return true
 		end
 	end
-	local bases = world:FindFirstChild("PlayerBases")
-	if bases == nil then
-		return false
-	end
-	for _, base in ipairs(bases:GetChildren()) do
-		local roof = base:FindFirstChild("Roof")
-		if roof ~= nil then
-			local under = math.abs(root.Position.X - roof.Position.X) < 18 and math.abs(root.Position.Z - roof.Position.Z) < 15
-			if under and root.Position.Y < roof.Position.Y then
-				return true
-			end
-		end
+	local lx = pos.X - lighthousePosition.X
+	local lz = pos.Z - lighthousePosition.Z
+	if math.sqrt(lx * lx + lz * lz) <= Config.ShelterRange then
+		return true
 	end
 	return false
 end
 
--- Darken the sky and count the warning down to every client. Returns the old ambient.
-function Monsoon.warn(remote, seconds)
-	local lighting = game:GetService("Lighting")
-	local before = lighting.Ambient
-	lighting.Ambient = Color3.fromRGB(70, 85, 110)
-	remote:FireAllClients("Monsoon", seconds)
-	for left = seconds, 1, -1 do
-		remote:FireAllClients("MonsoonTick", left)
-		task.wait(1)
+local function sweepWave(wave, fromZ, toZ, seconds)
+	local steps = math.max(1, math.floor(seconds / 0.05))
+	for step = 1, steps do
+		local alpha = step / steps
+		local z = fromZ + (toZ - fromZ) * alpha
+		wave.CFrame = CFrame.new(0, 10, z)
+		task.wait(0.05)
 	end
-	return before
 end
 
--- Sweep a neon wave across the map; unsheltered players are sent back to spawn.
-function Monsoon.wave(root, players, remote, before)
-	local surge = Instance.new("Part")
-	surge.Name = "MonsoonWave"
-	surge.Size = Vector3.new(280, 18, 34)
-	surge.Anchored = true
-	surge.CanCollide = false
-	surge.Material = Enum.Material.Neon
-	surge.Color = Color3.fromRGB(40, 200, 215)
-	surge.Transparency = 0.18
-	surge.Position = Vector3.new(0, 5, -95)
-	surge.Parent = root
-	remote:FireAllClients("Wave")
-	for z = -95, 110, 5 do
-		surge.Position = Vector3.new(0, 5, z)
-		for _, player in ipairs(players:GetPlayers()) do
+-- noticeEvent: RemoteEvent fired to all clients with a text message.
+-- players: array of Player objects currently in the game.
+function Monsoon.Run(noticeEvent, bases, lighthousePosition, players, spawnPosition)
+	task.spawn(function()
+		local lighting = game:GetService("Lighting")
+		local savedAmbient = lighting.Ambient
+		lighting.Ambient = DARK_AMBIENT
+		noticeEvent:FireAllClients("MONSOON INCOMING - TAKE SHELTER! (30s)")
+		task.wait(Config.MonsoonWarning)
+		local wave = Instance.new("Part")
+		wave.Name = "MonsoonWave"
+		wave.Shape = Enum.PartType.Block
+		wave.Size = Vector3.new(300, 22, 12)
+		wave.Position = Vector3.new(0, 10, -95)
+		wave.Color = Color3.fromRGB(60, 200, 255)
+		wave.Material = Enum.Material.Neon
+		wave.Transparency = 0.35
+		wave.Anchored = true
+		wave.CanCollide = false
+		wave.Parent = workspace
+		sweepWave(wave, -95, 0, 4)
+		for _, player in ipairs(players) do
 			local character = player.Character
-			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-			local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-			if humanoid ~= nil and rootPart ~= nil and rootPart.Position.Z <= z and not Monsoon.sheltered(character) then
-				character:PivotTo(CFrame.new(0, 5, -5))
+			if character and not Monsoon.IsSheltered(character, bases, lighthousePosition) then
+				local root = character:FindFirstChild("HumanoidRootPart")
+				if root then
+					root.CFrame = CFrame.new(spawnPosition)
+					noticeEvent:FireClient(player, "Swept away by the monsoon!")
+				end
 			end
 		end
-		task.wait(0.06)
-	end
-	surge:Destroy()
-	game:GetService("Lighting").Ambient = before or Color3.fromRGB(160, 145, 130)
-	remote:FireAllClients("MonsoonEnd")
+		sweepWave(wave, 0, 110, 4)
+		wave:Destroy()
+		lighting.Ambient = savedAmbient
+		noticeEvent:FireAllClients("The monsoon has passed.")
+	end)
 end
 
 return Monsoon
