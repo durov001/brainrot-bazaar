@@ -1,16 +1,19 @@
 feature	status	evidence	scope
-Twelve original names, exact prices/rates/rarities	pass	src/shared/BrainrotData.luau	static implementation; runtime not assessed
-Rarity ladder, colors, weights, and mutations	pass	src/shared/BrainrotData.luau	static implementation; runtime not assessed
-Rebirth formula and central tuning	pass	src/shared/BrainrotData.luau; src/shared/Config.luau	static implementation; runtime not assessed
-Original part-built models and three hero silhouettes	pass	src/server/BrainrotModels.luau	static implementation; runtime not assessed
-Golden-hour lighting and teal floating water	pass	default.project.json; src/server/World.luau	static implementation; runtime not assessed
-Wooden docks, four stalls, eight bases, eight pedestals	pass	src/server/World.luau	static implementation; runtime not assessed
-Conveyor, lighthouse shelter, lanterns, boats, palms	pass	src/server/World.luau	static implementation; runtime not assessed
-Server state and validation for buy/place/sell/rebirth	pass	src/server/GameServer.server.luau	static implementation; runtime not assessed
-Income tick, rotating offers, carried brainrot	pass	src/server/GameServer.server.luau	static implementation; runtime not assessed
-Thief patrol, lock, steal, flee, red label	pass	src/server/Thief.luau; src/server/GameServer.server.luau	static implementation; runtime not assessed
-Monsoon warning, darkening, wave sweep, shelter return	pass	src/server/Monsoon.luau; src/server/GameServer.server.luau	static implementation; runtime not assessed
-HUD, MY BASE, mission, prompts, title, pause, mute	pass	src/client/Game.client.luau	No SoundService access anywhere; mute is a flag plus a notice. Runtime not assessed.
-Billboard labels and income popups	pass	src/client/Game.client.luau	static implementation; runtime not assessed
-Rojo project, package script, README, tour	pass	default.project.json; main.ts; README.md; TOUR.json	static implementation; runtime not assessed
-Studio boot and screenshot capture	not_assessed	not run - no Studio on Linux	runtime
+buy brainrot	pass	GameServer.server.luau onBuy	server
+place brainrot	pass	GameServer.server.luau onPlace	server
+sell brainrot	pass	GameServer.server.luau onSell	server
+income tick	pass	GameServer.server.luau income loop	server
+rebirth	pass	GameServer.server.luau onRebirth	server
+base lock	pass	GameServer.server.luau onLock	server
+market rotation	pass	GameServer.server.luau refreshMarket	server
+thief patrol	pass	Thief.luau Run	server
+monsoon wave	pass	Monsoon.luau Run	server
+shelter check	pass	Monsoon.luau IsSheltered	server
+title screen	pass	Game.client.luau titleScreen	client
+hud	pass	Game.client.luau topBar	client
+base panel	pass	Game.client.luau basePanel	client
+income popup	pass	Game.client.luau spawnIncomePopup	client
+rojo build	pass	game.rbxl 25001 bytes	build
+luau analyze	pass	0 errors 10 files	build
+packaging deterministic	pass	out/ vs out2/ identical	build
+live playtest	not_assessed	needs Roblox Studio	runtime

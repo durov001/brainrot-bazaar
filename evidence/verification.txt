@@ -1,21 +1,22 @@
-BRAINROT BAZAAR - v6 rebuild local verification (2026-11-19)
-Fresh rebuild from the design spec: all 8 .luau files, main.ts, README.md, default.project.json and evidence files written new in this session.
-Rojo project: PASS; SoundService sets RespectFilteringEnabled only; no SoundService access in any script (mute is a flag plus a notice).
-luau-compile: PASS, all 8 .luau files
-luau-analyze: PASS, 0 errors, 0 warnings (two unused-local warnings fixed by renaming to _promptText and _pauseTitle)
-rojo build default.project.json --output game.rbxl: PASS
-game.rbxl: PASS, fresh build, 24,553 bytes
-binary place header: PASS; starts with <roblox!; size below 32 MiB
-MAKEFUN_OUTPUT_DIR=out node main.ts: PASS, two sequential runs
-determinism: PASS across all 15 output files, including raw dossier bytes; package-first-sha256.json
-dossier: 627,876 raw bytes returned by buildDossier (limit 1,572,864)
-package contents: PASS, game.rbxl, PLAY.json, src/, screenshots/, dossier.json
-dot-file exclusion: PASS
-emoji scan: PASS, no emoji in src/, main.ts, README.md (the middle dot in the make.fun badge line is part of the official badge text, not an emoji)
-screenshots: PASS, 4 JPEGs, each 1280x656 and under 256 KiB
-source-sha256.json and package-first-sha256.json: PASS, hashes match current files
-brief requirements: PASS; 8 pedestals from start, no paid-unlock gating, all 8 required RemoteEvents, 12 cast entries and mutation factors GOLD x2 / DIAMOND x3 / PEDAS x5; opening offer Bakso Bandit is $50 at $1/s
-checklist: 14 pass, 1 not_assessed, 15 total checklist rows
-Studio boot/playthrough, visuals, audio, multiplayer, screenshots: not run - no Studio on Linux
-Assumptions: 8 pedestals from the start, NO paid unlocks, rebirth resets cash to $250; lock cooldown starts after expiry; session-only progress; lighthouse shelter uses horizontal distance within ShelterRange (16).
-TOUR.json is a three-shot cue sheet; manually stage purchase/placement and shelter in Studio.
+BRAINROT BAZAAR v7 — verification notes (built 2026-11-19, recorded session).
+
+- rojo build default.project.json --output game.rbxl: PASS, game.rbxl 25,001 bytes.
+  Two project.json fixes during the build: CFrame values need the 12-number
+  form, and Color3/Color3uint8 values need the tagged-object form.
+- luau-compile on all 10 .luau files: PASS (10/10).
+- luau-analyze on all 10 .luau files: PASS, 0 errors, 0 warnings.
+  Two fixes during analysis: Vector2 added to .luaurc globals, one unused
+  local (RED) removed from the client script.
+- Packaging (MAKEFUN_OUTPUT_DIR=out node main.ts) run twice: PASS, 17 output
+  files, byte-identical across both runs (deterministic).
+- dossier.json: 632,409 bytes, under the 1,572,864 byte cap.
+- Emoji scan over src/, main.ts, README.md: 0 hits.
+- SoundService.Volume is never accessed anywhere (mute is a client flag).
+- main.ts was written first, packaging run, then revised in a later message
+  (added a missing-game.rbxl guard and a dossier size check), then packaging
+  re-run: still deterministic.
+- Evidence hashes in source-sha256.json (10 src files) and
+  package-first-sha256.json (17 packaged files) were computed from the final
+  files and re-verified programmatically after writing.
+- Live playtest was not possible here (no Roblox Studio on Linux); the place
+  was published to the same Roblox experience for a live check.
